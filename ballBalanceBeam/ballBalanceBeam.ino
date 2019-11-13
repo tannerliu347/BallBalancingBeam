@@ -3,15 +3,15 @@
 
 // 85 degree is zero; 150 max; 30 min 
 // turn off print for better performance when not debugging
-bool debug = true;
+bool debug = false;
 
 // Gain values
-uint8_t Kp = 10;
-uint8_t Kd = 10;
-uint8_t Ki = 1;
+int Kp = 4;
+int Kd = 8;
+int Ki = 1;
 
 // Reference distance cm
-uint8_t reference = 30;
+int reference = 27;
 
 // timing related
 unsigned long lastMs;
@@ -21,8 +21,8 @@ unsigned long updateMs = 10;
 
 // Servo pin and variable setup
 Servo servo;
-uint8_t servoAngle;
-uint8_t servoOffset = 85;
+int servoAngle;
+int servoOffset = 85;
 
 // VL5310
 // Vin - 5v
@@ -38,7 +38,7 @@ float lastDistance;
 
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   // pin 9 to servo PWM input
   servo.attach(9);
   // Vl5310 setup
@@ -52,6 +52,7 @@ void setup() {
 float distanceRead() {
   VL53L0X_RangingMeasurementData_t measure;
   lox.rangingTest(&measure, false);
+  //delay(1000);
   if (measure.RangeStatus != 4) {  // returns zero if out of range
     return measure.RangeMilliMeter * 0.1;
   } else {
@@ -59,19 +60,19 @@ float distanceRead() {
   }
 }
 
-uint8_t pControl() {
+int pControl() {
   return (int) Kp * distanceError + servoOffset;
 }
 
-uint8_t pdControl() {
-  return (int) Kp * (distanceError + distanceRate * Kd) + servoOffset;
+int pdControl() {
+  return  Kp * (distanceError + distanceRate * Kd) + servoOffset;
 }
 
-uint8_t piControl() {
+int piControl() {
   return 1;
 }
 
-uint8_t pidControl() {
+int pidControl() {
   return 1;
 }
 
@@ -88,9 +89,12 @@ void loop() {
     distance = distanceRead();
   }
   distanceError = reference - distance;
-  distanceRate = (lastDistance - distance) * 100; // rate of change in distance cm/s
+  distanceRate = (lastDistance - distance); // rate of change in distance cm/s
   lastDistance = distance;
   servoAngle = pdControl();
+//  Serial.print("servoAngle: "); Serial.println(servoAngle);
+//  Serial.print("distanceRate * Kd:"); Serial.println(distanceRate * Kd);
+//  Serial.print("distanceError + distanceRate * Kd: "); Serial.println(distanceError + distanceRate * Kd);
   // deal with saturation
   if (servoAngle < 30) {
     servoAngle = 30;
@@ -100,8 +104,9 @@ void loop() {
   servo.write(servoAngle);
   // debug print info
   if (debug) {
-    Serial.print("Distance: "); Serial.print(distance); Serial.println(" cm");
+    //Serial.print("Distance: "); Serial.print(distance); Serial.println(" cm");
     Serial.print("distance error:"); Serial.println(distanceError); 
-    Serial.print("servoAngle: "); Serial.println(servoAngle);
+    //Serial.print("distanceRate:"); Serial.println(distanceRate); 
+    //Serial.print("servoAngle: "); Serial.println(servoAngle);
   }
 }
