@@ -1,4 +1,5 @@
 #include <Servo.h>
+#include "Adafruit_VL53L0X.h"
 
 // 85 degree is zero; 150 max; 30 min 
 // turn off print for better performance when not debugging
@@ -17,19 +18,22 @@ unsigned long lastMs;
 unsigned long Ms;
 unsigned long updateMs = 10;
 
-// SR04 pin and variable setup
-#define trigPin 11
-#define echoPin 12
-float distance; // cm
-float lastDistance;
-float distanceError;
-float distanceRate; // cm/ms
 
 // Servo pin and variable setup
 Servo servo;
 uint8_t servoAngle;
 uint8_t servoOffset = 85;
 
+// VL5310
+// Vin - 5v
+// GND - GND
+// SCL - A5
+// SDA - A4
+Adafruit_VL53L0X lox = Adafruit_VL53L0X();
+float distanceError;
+float distance;
+float distanceRate;
+float lastDistance;
 
 
 
@@ -37,24 +41,22 @@ void setup() {
   Serial.begin(9600);
   // pin 9 to servo PWM input
   servo.attach(9);
-  // Define SR04 pin mode
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
-  digitalWrite(trigPin, LOW);
-
+  // Vl5310 setup
+  if (!lox.begin()) {
+    Serial.println(F("Failed to boot VL53L0X"));
+    while(1);
+  }
 }
 
 
 float distanceRead() {
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(5);
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-  pinMode(echoPin, INPUT);
-  long duration = pulseIn(echoPin, HIGH);
-  //delay(1000);
-  return duration * 0.5 * 0.000343;
+  VL53L0X_RangingMeasurementData_t measure;
+  lox.rangingTest(&measure, false);
+  if (measure.RangeStatus != 4) {  // returns zero if out of range
+    return measure.RangeMilliMeter * 0.1;
+  } else {
+    return 0;
+  }
 }
 
 uint8_t pControl() {
@@ -86,7 +88,7 @@ void loop() {
     distance = distanceRead();
   }
   distanceError = reference - distance;
-  distanceRate = (lastDistance - distance) * 100; // rate of change in distance m/s
+  distanceRate = (lastDistance - distance) * 100; // rate of change in distance cm/s
   lastDistance = distance;
   servoAngle = pdControl();
   // deal with saturation
