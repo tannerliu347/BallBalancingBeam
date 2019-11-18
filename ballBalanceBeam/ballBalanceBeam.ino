@@ -6,12 +6,14 @@
 bool debug = false;
 
 // Gain values
-int Kp = 4;
-int Kd = 8;
-int Ki = 1;
+float Kp = 4;
+float Kd = 8;
+// For PI
+float Kp2 = 1;
+int Ki = 10;
 
 // Reference distance cm
-int reference = 27;
+int reference = 37;
 
 // timing related
 unsigned long lastMs;
@@ -34,11 +36,14 @@ float distanceError;
 float distance;
 float distanceRate;
 float lastDistance;
+float cumDistErr;
 
 
 
 void setup() {
-  Serial.begin(115200);
+  if (debug) {
+    Serial.begin(115200);    
+  }
   // pin 9 to servo PWM input
   servo.attach(9);
   // Vl5310 setup
@@ -65,11 +70,11 @@ int pControl() {
 }
 
 int pdControl() {
-  return  Kp * (distanceError + distanceRate * Kd) + servoOffset;
+  return (int) Kp * (distanceError + distanceRate * Kd) + servoOffset;
 }
 
 int piControl() {
-  return 1;
+  return servoAngle + Kp2 * (distanceRate + Ki * distanceError);
 }
 
 int pidControl() {
@@ -88,13 +93,11 @@ void loop() {
   while (distance > 90 || distance < 0) {
     distance = distanceRead();
   }
-  distanceError = reference - distance;
+  distanceError = (reference - distance);
   distanceRate = (lastDistance - distance); // rate of change in distance cm/s
   lastDistance = distance;
+  cumDistErr = cumDistErr + distanceError;
   servoAngle = pdControl();
-//  Serial.print("servoAngle: "); Serial.println(servoAngle);
-//  Serial.print("distanceRate * Kd:"); Serial.println(distanceRate * Kd);
-//  Serial.print("distanceError + distanceRate * Kd: "); Serial.println(distanceError + distanceRate * Kd);
   // deal with saturation
   if (servoAngle < 30) {
     servoAngle = 30;
@@ -104,9 +107,9 @@ void loop() {
   servo.write(servoAngle);
   // debug print info
   if (debug) {
-    //Serial.print("Distance: "); Serial.print(distance); Serial.println(" cm");
+    Serial.print("Distance: "); Serial.print(distance); Serial.println(" cm");
     Serial.print("distance error:"); Serial.println(distanceError); 
-    //Serial.print("distanceRate:"); Serial.println(distanceRate); 
-    //Serial.print("servoAngle: "); Serial.println(servoAngle);
+    Serial.print("distanceRate:"); Serial.println(distanceRate); 
+    Serial.print("servoAngle: "); Serial.println(servoAngle);
   }
 }
