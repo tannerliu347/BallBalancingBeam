@@ -3,9 +3,10 @@
 
 // 85 degree is zero; 150 max; 30 min 
 // turn off print for better performance when not debugging
-bool debug = false;
+bool debug = true;
 
 // Gain values
+float T = 0.01
 float Kp = 4;
 float Kd = 8;
 // For PI
@@ -13,7 +14,7 @@ float Kp2 = 1;
 int Ki = 10;
 
 // Reference distance cm
-int reference = 37;
+int reference = 30;
 
 // timing related
 unsigned long lastMs;
@@ -70,7 +71,7 @@ int pControl() {
 }
 
 int pdControl() {
-  return (int) Kp * (distanceError + distanceRate * Kd) + servoOffset;
+  return (int) Kp * (distanceError + distanceRate * T * Kd) + servoOffset;
 }
 
 int piControl() {
@@ -107,9 +108,11 @@ void loop() {
   servo.write(servoAngle);
   // debug print info
   if (debug) {
-    Serial.print("Distance: "); Serial.print(distance); Serial.println(" cm");
-    Serial.print("distance error:"); Serial.println(distanceError); 
-    Serial.print("distanceRate:"); Serial.println(distanceRate); 
-    Serial.print("servoAngle: "); Serial.println(servoAngle);
+    //Serial.print("Distance: "); 
+    Serial.println(distance); 
+    //Serial.println(" cm");
+    //Serial.print("distance error:"); Serial.println(distanceError); 
+    //Serial.print("distanceRate:"); Serial.println(distanceRate); 
+    //Serial.print("servoAngle: "); Serial.println(servoAngle);
   }
 }
